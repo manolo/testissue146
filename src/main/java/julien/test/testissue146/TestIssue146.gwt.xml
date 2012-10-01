@@ -1,0 +1,5 @@
+<module rename-to='TestIssue146'>
+    <inherits name='com.google.gwt.query.Query'/>
+    <entry-point class='julien.test.testissue146.client.TestIssue146'/>
+</module>
+    

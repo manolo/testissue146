@@ -1,13 +1,15 @@
 package julien.test.testissue146.client;
 import static com.google.gwt.query.client.GQuery.$;
 
-import com.google.gwt.core.client.Duration;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NodeList;
 import com.google.gwt.query.client.GQuery;
+import com.google.gwt.query.client.Predicate;
 import com.google.gwt.query.client.js.JsNodeArray;
+import com.google.gwt.regexp.shared.MatchResult;
+import com.google.gwt.regexp.shared.RegExp;
 import com.google.gwt.user.client.DOM;
 
 import java.util.ArrayList;
@@ -30,6 +32,11 @@ public class TestIssue146 implements EntryPoint {
     m.filterNew("option");
     elapsedTime = System.currentTimeMillis() - startTime;
     $("#gquerytimenew").text(elapsedTime + "ms");
+
+    startTime = System.currentTimeMillis();
+    m.filterPredicate("[value]");
+    elapsedTime = System.currentTimeMillis() - startTime;
+    $("#gquerytimepredicate").text(elapsedTime + "ms");
   }
 
 
@@ -113,6 +120,38 @@ public class TestIssue146 implements EntryPoint {
         }
       }
       return pushStack(unique(array), "filter", filters[0]);
+    }
+
+    public GQuery filterPredicate(String filter) {
+      return filter(asPredicateFilter(filter));
+    }
+
+    private RegExp simpleAttrFilter = RegExp.compile("\\[([\\w-]+)(\\^|\\$|\\*|\\||~|!)?=?[\"']?([\\w\\u00C0-\\uFFFF\\s\\-_\\.]+)?[\"']?\\]");
+
+    public Predicate asPredicateFilter(String selector) {
+      final MatchResult simpleAttrMatch = simpleAttrFilter.exec(selector);
+      if (simpleAttrMatch == null) return null; // non simple attr filter
+      final String attrName = simpleAttrMatch.getGroup(1);
+      final String matchOp = simpleAttrMatch.getGroup(2);
+      final String matchVal = simpleAttrMatch.getGroup(3);
+      final char op = matchOp == null || matchOp.length() == 0 ? '0' : matchOp.charAt(0);
+      if ("0=^$*|~!".indexOf(op) == -1) return null; // unsupported or illegal operator
+      return new Predicate() {
+        @Override
+        public boolean f(Element e, int index) {
+          switch (op) {
+            case '0': return e.hasAttribute(attrName);
+            case '=': return e.getAttribute(attrName).equals(matchVal);
+            case '^': return e.getAttribute(attrName).startsWith(matchVal);
+            case '$': return e.getAttribute(attrName).endsWith(matchVal);
+            case '*': return e.getAttribute(attrName).contains(matchVal);
+            case '|': return (e.getAttribute(attrName) + "-").startsWith(matchVal + "-");
+            case '~': return (" " + e.getAttribute(attrName) + " ").contains(" " + matchVal + " ");
+            case '!': return !e.getAttribute(attrName).equals(matchVal);
+            default: return false;
+          }
+        }
+      };
     }
 
   }

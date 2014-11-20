@@ -9,7 +9,7 @@
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
 </head>
   <body>
-  
+
    	<div>
 		<select class="" data-placeholder="Choose a Country"
 			style="width: 350px;" tabindex="1">
@@ -503,18 +503,19 @@
 			<option value="Zimbabwe">Zimbabwe</option>
 		</select>
 	</div>
-	
-	<div>Running filter method on +/- 500 elements with GQuery : <span id="gquerytime">running</span></div>
+
+	<div>Running filter method on +/- 500 elements with GQuery old: <span id="gquerytimeold">running</span></div>
+    <div>Running filter method on +/- 500 elements with GQuery new: <span id="gquerytimenew">running</span></div>
 	<div>Running filter method on +/- 500 elements with JQuery : <span id="jquerytime">running</span></div>
-	
+
 	<script type="text/javascript">
 		var start = new Date();
 		$("select").children().filter("option");
 		var elapsed = new Date().getTime() - start.getTime();
-		
+
 		$("#jquerytime").text(""+ elapsed +"ms");
 	</script>
-	
-				
+
+
   </body>
 </html>

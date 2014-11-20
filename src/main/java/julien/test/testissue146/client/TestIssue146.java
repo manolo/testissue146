@@ -2,11 +2,13 @@ package julien.test.testissue146.client;
 import static com.google.gwt.query.client.GQuery.$;
 
 import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.core.client.JsArray;
 import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NodeList;
 import com.google.gwt.query.client.GQuery;
 import com.google.gwt.query.client.Predicate;
+import com.google.gwt.query.client.impl.SelectorEngineSizzle;
 import com.google.gwt.query.client.js.JsNodeArray;
 import com.google.gwt.regexp.shared.MatchResult;
 import com.google.gwt.regexp.shared.RegExp;
@@ -37,6 +39,11 @@ public class TestIssue146 implements EntryPoint {
     m.filterPredicate("[value]");
     elapsedTime = System.currentTimeMillis() - startTime;
     $("#gquerytimepredicate").text(elapsedTime + "ms");
+
+    startTime = System.currentTimeMillis();
+    m.filterSizzle("option");
+    elapsedTime = System.currentTimeMillis() - startTime;
+    $("#gquerytimesizzle").text(elapsedTime + "ms");
   }
 
 
@@ -154,6 +161,21 @@ public class TestIssue146 implements EntryPoint {
       };
     }
 
+    public GQuery filterSizzle(String selector) {
+      JsArray<Element> seed = JsArray.createArray(elements().length).cast();
+      for (Element element : elements()) seed.push(element);
+      JsNodeArray array = matches(selector, seed).cast();
+      return pushStack(array, "filter", selector);
+    }
+
   }
+
+  static {
+    SelectorEngineSizzle.initialize();
+  }
+
+  public static native JsArray<Element> matches(String selector, JsArray<Element> seed) /*-{
+      return $wnd.GQS(selector, null, null, seed);
+  }-*/;
 
 }

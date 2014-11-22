@@ -5,17 +5,14 @@ import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
-import com.google.gwt.dom.client.NodeList;
 import com.google.gwt.query.client.GQuery;
 import com.google.gwt.query.client.Predicate;
 import com.google.gwt.query.client.impl.SelectorEngineSizzle;
 import com.google.gwt.query.client.js.JsNodeArray;
+import com.google.gwt.query.client.js.JsUtils;
 import com.google.gwt.regexp.shared.MatchResult;
 import com.google.gwt.regexp.shared.RegExp;
 import com.google.gwt.user.client.DOM;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Example code for a GwtQuery application
@@ -51,47 +48,34 @@ public class TestIssue146 implements EntryPoint {
     protected MGQuery(GQuery gq) {
       super(gq);
     }
-    /**
-     * Removes all elements from the set of matched elements that do not pass the specified css
-     * expression. This method is used to narrow down the results of a search.
-     */
+
     public GQuery filterNew(String selector) {
+      boolean considerDetached = false;
       if (selector.isEmpty()) {
         return this;
       }
+      GQuery all = $(selector);
       Element ghostParent = null;
-      ArrayList<Element> parents = new ArrayList<Element>();
-      List<Element> elmList = new ArrayList<Element>();
-      for (Element e : elements()) {
-        if (e == window || e.getNodeName() == null || "html".equalsIgnoreCase(e.getNodeName())) {
-          continue;
-        }
-        elmList.add(e);
-        Element p = e.getParentElement();
-        if (p == null) {
-          if (ghostParent == null) {
-            ghostParent = Document.get().createDivElement();
-            parents.add(ghostParent);
+      if (considerDetached) {
+        ghostParent = Document.get().createDivElement();
+        for (Element e : elements()) {
+          if (JsUtils.isDetached(e)) {
+            ghostParent.appendChild(e);
           }
-          p = ghostParent;
-          p.appendChild(e);
-        } else if (!parents.contains(p)) {
-          parents.add(p);
         }
+        all = all.add($(selector, ghostParent));
       }
       JsNodeArray array = JsNodeArray.create();
-      for (Element e : parents) {
-        NodeList<Element> n  = engine.select(selector, e);
-        for (int i = 0, l = n.getLength(); i < l; i++) {
-          Element el = n.getItem(i);
-          if (elmList.contains(el)) {
-            elmList.remove(el);
-            array.addNode(el);
+      for (Element e : elements()) {
+        for (Element l : all.elements()) {
+          if (e == l) {
+            array.addNode(e);
+            break;
           }
         }
       }
       if (ghostParent != null) {
-        $(ghostParent).empty();
+        $(ghostParent).html(null);
       }
       return pushStack(array, "filter", selector);
     }

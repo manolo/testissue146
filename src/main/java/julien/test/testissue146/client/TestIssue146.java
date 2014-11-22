@@ -31,11 +31,17 @@ public class TestIssue146 implements EntryPoint {
     public static final String CELL_SELECTOR = "[__gwt_cell]";
 
     public void onModuleLoad() {
+        long startTime, elapsedTime;
         GQuery m = $("select").children();
 
-        long startTime = System.currentTimeMillis();
+        startTime = System.currentTimeMillis();
+        m.filterDefault("option");
+        elapsedTime = System.currentTimeMillis() - startTime;
+        $("#gquerytimedefault").text(elapsedTime + "ms");
+
+        startTime = System.currentTimeMillis();
         m.filterOld("option");
-        long elapsedTime = System.currentTimeMillis() - startTime;
+        elapsedTime = System.currentTimeMillis() - startTime;
         $("#gquerytimeold").text(elapsedTime + "ms");
 
         startTime = System.currentTimeMillis();

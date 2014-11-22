@@ -1,165 +1,154 @@
 package julien.test.testissue146.client;
+
 import static com.google.gwt.query.client.GQuery.$;
 
 import com.google.gwt.core.client.EntryPoint;
-import com.google.gwt.core.client.JsArray;
-import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
+import com.google.gwt.event.dom.client.ChangeEvent;
+import com.google.gwt.event.dom.client.ChangeHandler;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.query.client.Function;
 import com.google.gwt.query.client.GQuery;
-import com.google.gwt.query.client.Predicate;
-import com.google.gwt.query.client.impl.SelectorEngineSizzle;
-import com.google.gwt.query.client.js.JsNodeArray;
-import com.google.gwt.query.client.js.JsUtils;
-import com.google.gwt.regexp.shared.MatchResult;
-import com.google.gwt.regexp.shared.RegExp;
-import com.google.gwt.user.client.DOM;
+import com.google.gwt.user.cellview.client.AbstractCellTable;
+import com.google.gwt.user.cellview.client.CellTable;
+import com.google.gwt.user.cellview.client.TextColumn;
+import com.google.gwt.user.client.ui.FlowPanel;
+import com.google.gwt.user.client.ui.InlineLabel;
+import com.google.gwt.user.client.ui.IntegerBox;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.ListBox;
+import com.google.gwt.user.client.ui.RootPanel;
+import com.google.gwt.user.client.ui.ScrollPanel;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Example code for a GwtQuery application
  */
 public class TestIssue146 implements EntryPoint {
 
-  public void onModuleLoad() {
-    MGQuery m = new MGQuery($("select").children());
+    public static final String CELL_SELECTOR = "[__gwt_cell]";
 
-    long startTime = System.currentTimeMillis();
-    m.filterOld("option");
-    long elapsedTime = System.currentTimeMillis() - startTime;
-    $("#gquerytimeold").text(elapsedTime + "ms");
+    public void onModuleLoad() {
+        GQuery m = $("select").children();
 
-    startTime = System.currentTimeMillis();
-    m.filterNew("option");
-    elapsedTime = System.currentTimeMillis() - startTime;
-    $("#gquerytimenew").text(elapsedTime + "ms");
+        long startTime = System.currentTimeMillis();
+        m.filterOld("option");
+        long elapsedTime = System.currentTimeMillis() - startTime;
+        $("#gquerytimeold").text(elapsedTime + "ms");
 
-    startTime = System.currentTimeMillis();
-    m.filterPredicate("[value]");
-    elapsedTime = System.currentTimeMillis() - startTime;
-    $("#gquerytimepredicate").text(elapsedTime + "ms");
+        startTime = System.currentTimeMillis();
+        m.filterNew(false, "option");
+        elapsedTime = System.currentTimeMillis() - startTime;
+        $("#gquerytimenewfalse").text(elapsedTime + "ms");
 
-    startTime = System.currentTimeMillis();
-    m.filterSizzle("option");
-    elapsedTime = System.currentTimeMillis() - startTime;
-    $("#gquerytimesizzle").text(elapsedTime + "ms");
-  }
+        startTime = System.currentTimeMillis();
+        m.filterNew(true, "option");
+        elapsedTime = System.currentTimeMillis() - startTime;
+        $("#gquerytimenewtrue").text(elapsedTime + "ms");
 
+        startTime = System.currentTimeMillis();
+        m.filterPredicate("[value]");
+        elapsedTime = System.currentTimeMillis() - startTime;
+        $("#gquerytimepredicate").text(elapsedTime + "ms");
 
-  private class MGQuery extends GQuery {
-    protected MGQuery(GQuery gq) {
-      super(gq);
-    }
+        startTime = System.currentTimeMillis();
+        m.filterSizzle("option");
+        elapsedTime = System.currentTimeMillis() - startTime;
+        $("#gquerytimesizzle").text(elapsedTime + "ms");
 
-    public GQuery filterNew(String selector) {
-      boolean considerDetached = false;
-      if (selector.isEmpty()) {
-        return this;
-      }
-      GQuery all = $(selector);
-      Element ghostParent = null;
-      if (considerDetached) {
-        ghostParent = Document.get().createDivElement();
-        for (Element e : elements()) {
-          if (JsUtils.isDetached(e)) {
-            ghostParent.appendChild(e);
-          }
+        // live events performance
+        final Label breadcrumb = new Label();
+        final ListBox algorithm = new ListBox();
+        for (GQuery.FilterStrategy filterStrategy : GQuery.FilterStrategy.values()) {
+            algorithm.addItem(filterStrategy.name());
         }
-        all = all.add($(selector, ghostParent));
-      }
-      JsNodeArray array = JsNodeArray.create();
-      for (Element e : elements()) {
-        for (Element l : all.elements()) {
-          if (e == l) {
-            array.addNode(e);
-            break;
-          }
-        }
-      }
-      if (ghostParent != null) {
-        $(ghostParent).html(null);
-      }
-      return pushStack(array, "filter", selector);
-    }
-
-    public GQuery filterOld(String... filters) {
-      if (filters.length == 0 || filters[0] == null) {
-        return this;
-      }
-
-      JsNodeArray array = JsNodeArray.create();
-
-      for (String f : filters) {
-        for (Element e : elements()) {
-          boolean ghostParent = false;
-          if (e == window || e.getNodeName() == null) {
-            continue;
-          }
-          if (e.getParentNode() == null) {
-            DOM.createDiv().appendChild(e);
-            ghostParent = true;
-          }
-
-          for (Element c : $(f, e.getParentNode()).elements()) {
-            if (c == e) {
-              array.addNode(c);
-              break;
+        algorithm.addChangeHandler(new ChangeHandler() {
+            @Override
+            public void onChange(ChangeEvent event) {
+                String value = algorithm.getSelectedValue();
+                GQuery.filterStrategy = value == null || value.isEmpty()
+                        ? GQuery.FilterStrategy.DEFAULT
+                        : GQuery.FilterStrategy.valueOf(value);
+                GQuery node = $(CELL_SELECTOR).first();
+                StringBuilder message = new StringBuilder();
+                long total = 0;
+                while (!node.is("body")) {
+                    long startTime = System.currentTimeMillis();
+                    node.is(CELL_SELECTOR);
+                    long elapsed = System.currentTimeMillis() - startTime;
+                    total += elapsed;
+                    message.append(node.get(0).getTagName()).append(" ").append(elapsed).append("ms > ");
+                    node = node.parent();
+                }
+                breadcrumb.setText(message.append(" total ").append(total).append("ms").toString());
             }
-          }
+        });
 
-          if (ghostParent) {
-            e.removeFromParent();
-          }
-        }
-      }
-      return pushStack(unique(array), "filter", filters[0]);
+        $(CELL_SELECTOR).live("mouseenter", new Function() {
+            @Override
+            public void f(final Element e) {
+                $(e).css("color", "red");
+            }
+        });
+        $(CELL_SELECTOR).live("mouseleave", new Function() {
+            @Override
+            public void f(final Element e) {
+                $(e).css("color", null);
+            }
+        });
+
+        final AbstractCellTable<String> bigTable = new CellTable<String>(Integer.MAX_VALUE);
+        final TextColumn<String> col = new TextColumn<String>() {
+            @Override
+            public String getValue(String object) {
+                return object;
+            }
+        };
+
+        final IntegerBox cols = new IntegerBox();
+        cols.setTitle("cols");
+        cols.addValueChangeHandler(new ValueChangeHandler<Integer>() {
+            @Override
+            public void onValueChange(ValueChangeEvent<Integer> event) {
+                while (bigTable.getColumnCount() > 0) bigTable.removeColumn(0);
+                for (int i = 0; i < event.getValue(); i++) {
+                    bigTable.addColumn(col);
+                }
+            }
+        });
+        cols.setValue(10, true);
+
+        IntegerBox rows = new IntegerBox();
+        rows.setTitle("rows");
+        rows.addValueChangeHandler(new ValueChangeHandler<Integer>() {
+            @Override
+            public void onValueChange(ValueChangeEvent<Integer> event) {
+                List<String> listData = new ArrayList<String>(event.getValue());
+                for (int i = 0; i < event.getValue(); i++) {
+                    listData.add("#" + (int) (Math.random() * 1000));
+                }
+                bigTable.setRowData(listData);
+            }
+        });
+        rows.setValue(1000, true);
+
+        ScrollPanel vScroll = new ScrollPanel(bigTable);
+        vScroll.setWidth("400px");
+        vScroll.setHeight("300px");
+
+        FlowPanel widgets = new FlowPanel();
+        widgets.add(new InlineLabel("algorithm: "));
+        widgets.add(algorithm);
+        widgets.add(new InlineLabel(" cols: "));
+        widgets.add(cols);
+        widgets.add(new InlineLabel(" rows: "));
+        widgets.add(rows);
+        widgets.add(breadcrumb);
+        widgets.add(vScroll);
+
+        RootPanel.get("hovertable").add(widgets);
     }
-
-    public GQuery filterPredicate(String filter) {
-      return filter(asPredicateFilter(filter));
-    }
-
-    private RegExp simpleAttrFilter = RegExp.compile("\\[([\\w-]+)(\\^|\\$|\\*|\\||~|!)?=?[\"']?([\\w\\u00C0-\\uFFFF\\s\\-_\\.]+)?[\"']?\\]");
-
-    public Predicate asPredicateFilter(String selector) {
-      final MatchResult simpleAttrMatch = simpleAttrFilter.exec(selector);
-      if (simpleAttrMatch == null) return null; // non simple attr filter
-      final String attrName = simpleAttrMatch.getGroup(1);
-      final String matchOp = simpleAttrMatch.getGroup(2);
-      final String matchVal = simpleAttrMatch.getGroup(3);
-      final char op = matchOp == null || matchOp.length() == 0 ? '0' : matchOp.charAt(0);
-      if ("0=^$*|~!".indexOf(op) == -1) return null; // unsupported or illegal operator
-      return new Predicate() {
-        @Override
-        public boolean f(Element e, int index) {
-          switch (op) {
-            case '0': return e.hasAttribute(attrName);
-            case '=': return e.getAttribute(attrName).equals(matchVal);
-            case '^': return e.getAttribute(attrName).startsWith(matchVal);
-            case '$': return e.getAttribute(attrName).endsWith(matchVal);
-            case '*': return e.getAttribute(attrName).contains(matchVal);
-            case '|': return (e.getAttribute(attrName) + "-").startsWith(matchVal + "-");
-            case '~': return (" " + e.getAttribute(attrName) + " ").contains(" " + matchVal + " ");
-            case '!': return !e.getAttribute(attrName).equals(matchVal);
-            default: return false;
-          }
-        }
-      };
-    }
-
-    public GQuery filterSizzle(String selector) {
-      JsArray<Element> seed = JsArray.createArray(elements().length).cast();
-      for (Element element : elements()) seed.push(element);
-      JsNodeArray array = matches(selector, seed).cast();
-      return pushStack(array, "filter", selector);
-    }
-
-  }
-
-  static {
-    SelectorEngineSizzle.initialize();
-  }
-
-  public static native JsArray<Element> matches(String selector, JsArray<Element> seed) /*-{
-      return $wnd.GQS(selector, null, null, seed);
-  }-*/;
 
 }

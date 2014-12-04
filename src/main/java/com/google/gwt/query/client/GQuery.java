@@ -2377,36 +2377,49 @@ public class GQuery implements Lazy<GQuery, LazyGQuery> {
         return pushStack(unique(array), "filter", filters[0]);
     }
 
-    public GQuery filterNew(boolean considerDetached, String... filters) {
+    public GQuery filterNew(boolean filterDetached, String... filters) {
         String selector = "";
         for (String f : filters) {
-            selector += (!selector.isEmpty() ? "," : "") + f;
+            selector += (selector.isEmpty() ? "" : ",") + f;
         }
-        if (selector.isEmpty()) {
-            return this;
-        }
-        GQuery all = $(selector);
+        if (selector.isEmpty()) return this;
         Element ghostParent = null;
-        if (considerDetached) {
-            ghostParent = Document.get().createDivElement();
-            for (Element e : elements()) {
-                if (JsUtils.isDetached(e)) {
-                    ghostParent.appendChild(e);
-                }
+        ArrayList<Node> parents = new ArrayList<Node>();
+        List<Node> elmList = new ArrayList<Node>();
+        for (Node e : elements()) {
+            if (e == window || e == document || e.getNodeName() == null || "html".equalsIgnoreCase(e.getNodeName())) {
+                continue;
             }
-            all = all.add($(selector, ghostParent));
+            elmList.add(e);
+            if (filterDetached) {
+                Element p = e.getParentElement();
+                if (p == null) {
+                    if (ghostParent == null) {
+                        ghostParent = Document.get().createDivElement();
+                        parents.add(ghostParent);
+                    }
+                    p = ghostParent;
+                    p.appendChild(e);
+                } else if (!parents.contains(p)) {
+                    parents.add(p);
+                }
+            } else if (parents.isEmpty()) {
+                parents.add(document);
+            }
         }
         JsNodeArray array = JsNodeArray.create();
-        for (Element e : elements()) {
-            for (Element l : all.elements()) {
-                if (e == l) {
-                    array.addNode(e);
-                    break;
+        for (Node e : parents) {
+            NodeList<Element> n  = getSelectorEngine().select(selector, e);
+            for (int i = 0, l = n.getLength(); i < l; i++) {
+                Element el = n.getItem(i);
+                if (elmList.contains(el)) {
+                    elmList.remove(el);
+                    array.addNode(el);
                 }
             }
         }
         if (ghostParent != null) {
-            $(ghostParent).html(null);
+            $(ghostParent).empty();
         }
         return pushStack(array, "filter", selector);
     }
